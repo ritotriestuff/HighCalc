@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Calc</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@100;200;300&family=Barlow:wght@200;300;400&display=swap">
+<style>
+:root {
+  --bg: #0a0a0a;
+  --panel: rgba(10, 10, 10, 0.72);
+  --fg: #d6d6d0;
+  --muted: #9a9a9a;
+  --line: #333333;
+  --line-soft: #242424;
+  --accent: #a4bf74;
+  --decor: 0.17;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: Barlow, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); }
+body { color: var(--fg); font-family: var(--body); font-weight: 300; }
+.page { position: relative; min-height: 100vh; overflow: hidden; }
+
+.decor { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.decor svg { position: absolute; height: auto; opacity: var(--decor); }
+.decor .leaf g { fill: none; stroke: var(--accent); stroke-width: 1.2; }
+.decor .smoke g { fill: none; stroke: var(--fg); stroke-width: 1; }
+
+.wrap {
+  position: relative; z-index: 1; max-width: 1320px; margin: 0 auto;
+  padding: 28px 24px 80px; display: flex; flex-direction: column; gap: 56px;
+}
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line-soft); padding-bottom: 18px; }
+.logo { font-family: var(--display); font-weight: 200; font-size: 28px; letter-spacing: 0.04em; }
+.logo span, .accent { color: var(--accent); }
+.cap { font-size: 12px; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+
+h1 { margin: 0; font-family: var(--display); font-weight: 100; font-size: clamp(60px, 10vw, 160px); line-height: 0.95; letter-spacing: 0.01em; text-transform: uppercase; }
+h2 { margin: 0; font-family: var(--display); font-weight: 100; font-size: 48px; line-height: 1; text-transform: uppercase; }
+
+/* dropdown strip */
+.controls { display: flex; flex-wrap: wrap; border: 1px solid var(--line); background: var(--panel); }
+.field { flex: 1 1 260px; min-width: 0; padding: 18px; border-right: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.field:last-child { border-right: 0; }
+.field-label { color: var(--accent); font-size: 12px; font-weight: 400; letter-spacing: 0.22em; text-transform: uppercase; }
+.dd { position: relative; }
+.dd-btn {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 52px;
+  background: transparent; color: var(--fg); border: 0; border-bottom: 1px solid var(--line); border-radius: 0;
+  padding: 6px 0 10px; font-family: var(--display); font-weight: 200; font-size: 26px; letter-spacing: 0.02em;
+  text-transform: uppercase; text-align: left; cursor: pointer;
+}
+.dd-btn:hover, .dd.open .dd-btn { border-bottom-color: var(--accent); }
+.dd-btn span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-btn svg { flex: none; transition: transform 0.2s ease; }
+.dd.open .dd-btn svg { transform: rotate(180deg); }
+.dd-list {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20; margin: 0; padding: 6px 0; list-style: none;
+  background: #0f100e; border: 1px solid var(--accent); max-height: 340px; overflow-y: auto;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.65); scrollbar-width: thin; scrollbar-color: #3a3d34 transparent;
+}
+.dd-list::-webkit-scrollbar { width: 6px; }
+.dd-list::-webkit-scrollbar-thumb { background: #3a3d34; }
+.dd-opt {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; min-height: 44px;
+  background: transparent; color: var(--fg); border: 0; padding: 8px 16px; font-family: var(--display); font-weight: 300;
+  font-size: 17px; letter-spacing: 0.1em; text-transform: uppercase; text-align: left; cursor: pointer;
+}
+.dd-opt:hover, .dd-opt:focus-visible { background: #1b1d18; outline: none; }
+.dd-opt[aria-selected="true"] { background: rgba(164, 191, 116, 0.10); color: var(--accent); }
+.dd-opt[aria-selected="true"]::after { content: "\25CF"; font-size: 10px; }
+.dd-btn:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.hint { font-size: 13px; color: var(--muted); font-weight: 400; }
+.hint.accent { color: var(--accent); }
+
+/* result */
+.result { display: flex; flex-wrap: wrap; gap: 24px; align-items: stretch; }
+.result-main { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.big { font-family: var(--display); font-weight: 100; font-size: clamp(84px, 14vw, 220px); line-height: 0.95; color: var(--accent); text-transform: uppercase; white-space: nowrap; }
+.stats { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--panel); }
+.stat { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.stat:last-child { border-bottom: 0; color: var(--accent); flex-grow: 1; }
+.stat:last-child .cap { color: var(--accent); }
+.stat b { font-family: var(--display); font-weight: 200; font-size: 34px; text-transform: uppercase; }
+
+/* feel + curve */
+.duo { display: flex; flex-wrap: wrap; gap: 24px; }
+.card { min-width: 0; border: 1px solid var(--line-soft); background: var(--panel); padding: 28px; display: flex; flex-direction: column; gap: 22px; }
+.card.feel { flex: 1 1 420px; }
+.card.curve { flex: 1 1 520px; gap: 16px; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.feel-text { margin: 0; font-size: 19px; line-height: 1.55; max-width: 60ch; }
+.meters { display: flex; flex-direction: column; gap: 14px; }
+.meter { display: flex; flex-direction: column; gap: 6px; }
+.meter-head { display: flex; justify-content: space-between; font-size: 12px; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; }
+.meter-head span:last-child { color: var(--muted); }
+.bar { height: 3px; background: #1f1f1f; }
+.bar i { display: block; height: 3px; background: var(--accent); transition: width 0.5s ease; }
+.bar.head i { background: var(--fg); }
+.tags { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 6px; }
+.tag { border: 1px solid var(--accent); color: var(--accent); font-family: var(--display); font-weight: 200; font-size: 17px; letter-spacing: 0.14em; text-transform: uppercase; padding: 6px 14px; }
+.tag:nth-child(even) { border-color: var(--muted); color: var(--muted); }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { font-family: var(--body); font-size: 15px; font-weight: 400; fill: var(--muted); }
+
+/* steps */
+.steps { display: flex; flex-direction: column; gap: 20px; }
+.step-row { display: flex; flex-wrap: wrap; border-top: 1px solid var(--line); }
+.step { flex: 1 1 260px; min-width: 0; padding: 22px 22px 22px 0; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line-soft); }
+.step .num { font-family: var(--display); font-weight: 100; font-size: 64px; line-height: 1; color: var(--accent); }
+.step .name { font-family: var(--display); font-weight: 200; font-size: 26px; text-transform: uppercase; }
+.step .when { font-size: 13px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.step p { margin: 0; font-size: 16px; line-height: 1.55; max-width: 36ch; }
+
+/* safety */
+.safety { border: 1px solid var(--accent); background: var(--panel); padding: 32px; display: flex; flex-wrap: wrap; gap: 28px; }
+.safety h2 { flex: 1 1 260px; color: var(--accent); font-size: clamp(44px, 6vw, 80px); line-height: 0.95; }
+.safety ul { flex: 999 1 480px; min-width: 0; margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; font-size: 17px; line-height: 1.55; }
+
+footer { display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; border-top: 1px solid var(--line-soft); padding-top: 20px; font-size: 13px; color: var(--muted); line-height: 1.6; }
+footer p { margin: 0; max-width: 80ch; }
+footer .logo { font-size: 22px; color: var(--fg); }
+
+@media (max-width: 600px) {
+  .wrap { padding-left: 16px; padding-right: 16px; gap: 44px; }
+  .field { border-right: 0; border-bottom: 1px solid var(--line); }
+  .field:last-child { border-bottom: 0; }
+  .card, .safety { padding: 20px; }
+  .big { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="decor" aria-hidden="true" id="decor">
+    <svg class="smoke" viewBox="0 0 1440 900" preserveAspectRatio="none" style="top: 380px; left: 0; width: 100%; height: 900px">
+      <g>
+        <path d="M-40,820 C180,760 220,600 380,560 C540,520 560,660 720,620 C880,580 860,380 1040,330 C1220,280 1300,420 1480,360" vector-effect="non-scaling-stroke"/>
+        <path d="M-40,860 C200,800 260,660 420,620 C580,580 600,720 760,680 C920,640 900,440 1080,390 C1260,340 1320,480 1480,430" vector-effect="non-scaling-stroke"/>
+        <path d="M-40,780 C160,720 190,560 340,510 C500,460 520,600 680,560 C840,520 830,330 1000,280 C1180,230 1270,360 1480,300" vector-effect="non-scaling-stroke"/>
+      </g>
+    </svg>
+    <svg class="smoke" viewBox="0 0 1440 700" preserveAspectRatio="none" style="bottom: 260px; left: 0; width: 100%; height: 700px">
+      <g>
+        <path d="M1480,120 C1260,180 1200,320 1020,350 C840,380 800,240 620,280 C440,320 440,520 240,560 C80,590 20,500 -40,540" vector-effect="non-scaling-stroke"/>
+        <path d="M1480,160 C1280,220 1230,360 1050,392 C870,424 830,284 650,324 C470,364 470,564 270,604 C110,634 40,544 -40,584" vector-effect="non-scaling-stroke"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="logo">HIGH<span>CALC</span></div>
+      <div class="cap">Estimates only / not medical advice</div>
+    </div>
+
+    <h1>How high.<br><span class="accent">How long.</span></h1>
+
+    <div class="controls" id="controls"></div>
+
+    <div class="result">
+      <div class="result-main">
+        <div class="cap" style="font-size: 13px; letter-spacing: 0.18em">It lasts</div>
+        <div class="big" id="rTotal"></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span class="cap">Kicks in</span><b id="rOnset"></b></div>
+        <div class="stat"><span class="cap">Peaks</span><b id="rPeak"></b></div>
+        <div class="stat"><span class="cap">Strength</span><b id="rStrength"></b></div>
+      </div>
+    </div>
+
+    <div class="duo">
+      <section class="card feel">
+        <h2>The feel</h2>
+        <p class="feel-text" id="feel"></p>
+        <div class="meters">
+          <div class="meter"><div class="meter-head"><span>Body</span><span id="bodyPct"></span></div><div class="bar"><i id="bodyBar"></i></div></div>
+          <div class="meter"><div class="meter-head"><span>Head</span><span id="headPct"></span></div><div class="bar head"><i id="headBar"></i></div></div>
+        </div>
+        <div class="tags" id="tags"></div>
+      </section>
+      <section class="card curve">
+        <div class="card-head"><h2>The curve</h2><span class="cap">Shaded = could run this long</span></div>
+        <svg class="chart" id="chart" viewBox="0 0 1000 380" role="img" aria-label="Estimated strength of the high over time"></svg>
+      </section>
+    </div>
+
+    <section class="steps">
+      <h2>Step by step</h2>
+      <div class="step-row" id="steps"></div>
+    </section>
+
+    <section class="safety">
+      <h2>Read<br>this<br>first</h2>
+      <ul id="safety"></ul>
+    </section>
+
+    <footer>
+      <p>Estimates from typical ranges. Your body, food, sleep, mood and product strength all change it. Indica and sativa are a loose guide; the actual cannabinoid and terpene mix matters more. Follow your local laws.</p>
+      <div class="logo">HIGH<span>CALC</span></div>
+    </footer>
+  </div>
+</div>
+
+<script>
+const STRAINS = [
+  { id: 'indica', name: 'Indica (any)', type: 'indica', thc: 0 },
+  { id: 'sativa', name: 'Sativa (any)', type: 'sativa', thc: 0 },
+  { id: 'hybrid', name: 'Hybrid (any)', type: 'hybrid', thc: 0 },
+  { id: 'cbd', name: 'High-CBD (any)', type: 'cbd', thc: 0 },
+  { id: 'bluedream', name: 'Blue Dream', type: 'hybrid-s', thc: 18 },
+  { id: 'sourdiesel', name: 'Sour Diesel', type: 'sativa', thc: 20 },
+  { id: 'jack', name: 'Jack Herer', type: 'sativa', thc: 18 },
+  { id: 'gsc', name: 'Girl Scout Cookies', type: 'hybrid', thc: 22 },
+  { id: 'gelato', name: 'Gelato', type: 'hybrid', thc: 22 },
+  { id: 'og', name: 'OG Kush', type: 'hybrid-i', thc: 20 },
+  { id: 'gdp', name: 'Granddaddy Purple', type: 'indica', thc: 20 },
+  { id: 'nl', name: 'Northern Lights', type: 'indica', thc: 18 },
+  { id: 'harlequin', name: 'Harlequin', type: 'cbd', thc: 6 },
+  { id: 'acdc', name: 'ACDC', type: 'cbd', thc: 1 }
+];
+const TYPES = {
+  indica: { label: 'Indica-leaning', body: .85, head: .4, tags: ['Relaxed', 'Heavy', 'Sleepy', 'Munchies'],
+    feel: 'Mostly a body high: warm, heavy limbs and a calm head. Built for winding down, not for getting things done.' },
+  sativa: { label: 'Sativa-leaning', body: .35, head: .85, tags: ['Energetic', 'Chatty', 'Creative', 'Euphoric'],
+    feel: 'Mostly a head high: bright, chatty and creative, with music and ideas feeling bigger. It can tip into racy or anxious at higher doses.' },
+  hybrid: { label: 'Hybrid', body: .6, head: .6, tags: ['Balanced', 'Happy', 'Loose', 'Giggly'],
+    feel: 'A balanced high: a lifted mood up top and a loose, comfortable body.' },
+  'hybrid-s': { label: 'Sativa-leaning hybrid', body: .45, head: .75, tags: ['Uplifted', 'Creative', 'Chill', 'Focused'],
+    feel: 'Starts in the head with a lifted, creative mood, then settles into easy body relaxation.' },
+  'hybrid-i': { label: 'Indica-leaning hybrid', body: .75, head: .55, tags: ['Euphoric', 'Melted', 'Munchies', 'Heavy'],
+    feel: 'A strong euphoric start that sinks into the body. Easy to end up glued to the couch.' },
+  cbd: { label: 'High-CBD', body: .4, head: .2, tags: ['Calm', 'Clear', 'Mellow', 'Low anxiety'],
+    feel: 'Clear and mellow. CBD softens THC’s edge, so you get calm and light relaxation with little of the classic high.' }
+};
+// minutes: onset range, peak window [start, end], total range
+const METHODS = [
+  { id: 'joint', name: 'Joint', onset: [2, 10], peak: [15, 45], total: [90, 180], kind: 'smoke' },
+  { id: 'blunt', name: 'Blunt', onset: [2, 10], peak: [20, 60], total: [120, 240], kind: 'smoke' },
+  { id: 'bong', name: 'Bong / pipe', onset: [1, 5], peak: [10, 40], total: [60, 180], kind: 'smoke' },
+  { id: 'cart', name: 'Vape cart', onset: [1, 5], peak: [10, 35], total: [60, 150], kind: 'vape' },
+  { id: 'dab', name: 'Dab', onset: [0.5, 2], peak: [5, 30], total: [60, 180], kind: 'dab' },
+  { id: 'edible', name: 'Edible', onset: [30, 120], peak: [120, 240], total: [240, 480], kind: 'edible' },
+  { id: 'drink', name: 'Weed drink', onset: [15, 45], peak: [45, 90], total: [120, 240], kind: 'edible' },
+  { id: 'tincture', name: 'Tincture', onset: [15, 45], peak: [60, 120], total: [180, 360], kind: 'tincture' }
+];
+const METHOD_HINT = { smoke: 'Hits in minutes', vape: 'Fast and clean, easy to overdo', dab: 'Concentrate, 60–90% THC',
+  edible: 'Slow to hit, lasts the longest', tincture: 'Drops under the tongue' };
+const LEVELS = [
+  { id: '1', name: 'Microdose', short: 'Micro', mult: .6 },
+  { id: '2', name: 'Mild buzz', short: 'Mild', mult: .8 },
+  { id: '3', name: 'Clearly high', short: 'Solid', mult: 1 },
+  { id: '4', name: 'Very high', short: 'Strong', mult: 1.2 },
+  { id: '5', name: 'Couch-locked', short: 'Max', mult: 1.4 }
+];
+const TOLS = [
+  { id: '1', name: 'First time' },
+  { id: '0', name: 'Few times a month' },
+  { id: '-0.5', name: 'Weekly' },
+  { id: '-1', name: 'Daily' }
+];
+const DOSES = {
+  smoke: ['1 small puff', '1–2 puffs', '3–5 hits (about ¼ joint)', 'about half a joint', 'a whole joint or more'],
+  vape: ['1 short pull', '1–2 pulls', '3–4 pulls', '5–8 pulls', '10+ pulls'],
+  dab: ['a tiny crumb', 'a crumb-sized dab', 'a rice-grain dab', 'a full dab', 'multiple dabs'],
+  edible: ['1–2.5 mg THC', '2.5–5 mg THC', '5–10 mg THC', '10–20 mg THC', '20+ mg THC'],
+  tincture: ['1–2.5 mg THC', '2.5–5 mg THC', '5–10 mg THC', '10–15 mg THC', '15+ mg THC']
+};
+const BLUNT_DOSES = ['1 small puff', '2–3 puffs', 'a few rotations', 'a big share of a blunt', 'a whole blunt (1–2 g)'];
+const PEAK_FEEL = [
+  'Barely noticeable. Mood is a notch brighter and you stay fully functional.',
+  'A light buzz. Music, food and conversation get a little better, and you can still handle normal tasks.',
+  'Clearly high. Time stretches, laughs come easy and short-term memory starts slipping.',
+  'Very high. Thoughts loop and wander, coordination is off, and anxiety or a racing heart become possible.',
+  'Intense. Real chance of paranoia, dizziness or nausea. Stay in one comfortable place with someone you trust.'
+];
+
+const state = { strain: 'bluedream', method: 'joint', level: '3', tol: '0' };
+const $ = id => document.getElementById(id);
+
+// background leaves: [css position, width px, rotation deg]
+const LEAVES = [
+  ['top: -60px; right: -120px', 640, 18],
+  ['top: 1150px; left: -200px', 560, -32],
+  ['bottom: 120px; right: -90px', 420, 140],
+  ['top: 150px; left: 3%', 210, -40],
+  ['top: 560px; left: 40%', 260, -12],
+  ['top: 860px; right: -60px', 380, 60],
+  ['top: 1600px; left: 34%', 300, 200],
+  ['top: 1950px; right: 8%', 230, -70],
+  ['top: 2150px; left: -80px', 360, 25]
+];
+const LEAFLET = 'M0,0 C-26,-60 -30,-150 0,-215 C30,-150 26,-60 0,0 Z M0,-8 L0,-200';
+const leafPaths = [[-78, .42], [-52, .68], [-26, .9], [0, 1], [26, .9], [52, .68], [78, .42]]
+  .map(([a, s]) => `<path transform="rotate(${a}) scale(${s})" d="${LEAFLET}" vector-effect="non-scaling-stroke"/>`).join('') +
+  '<path d="M0,0 C4,50 -6,110 10,180" vector-effect="non-scaling-stroke"/>';
+$('decor').insertAdjacentHTML('afterbegin', LEAVES.map(([pos, w, r]) =>
+  `<svg class="leaf" viewBox="-240 -250 480 440" style="${pos}; width: ${w}px; transform: rotate(${r}deg)"><g>${leafPaths}</g></svg>`).join(''));
+
+const hrs = x => { const h = Math.round(x / 30) / 2; return h % 1 ? h.toFixed(1) : String(h); };
+const fmt = min => min < 1 ? '<1 min' : min < 60 ? Math.round(min) + ' min' : hrs(min) + ' h';
+function range(a, b) {
+  if (b < 60) return (a < 1 ? '<1' : Math.round(a)) + '–' + Math.round(b) + ' min';
+  if (a >= 60) return hrs(a) + '–' + hrs(b) + ' h';
+  return fmt(a) + '–' + fmt(b);
+}
+const smooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+
+// themed dropdowns (native select menus ignore page styling)
+const FIELDS = [
+  { key: 'strain', label: 'Strain', list: STRAINS },
+  { key: 'method', label: 'Method', list: METHODS },
+  { key: 'level', label: 'How high', list: LEVELS },
+  { key: 'tol', label: 'How often you smoke', list: TOLS }
+];
+let openDD = null;
+$('controls').innerHTML = FIELDS.map(f => `
+  <div class="field">
+    <span class="field-label" id="lbl-${f.key}">${f.label}</span>
+    <div class="dd" id="dd-${f.key}">
+      <button type="button" class="dd-btn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="lbl-${f.key}">
+        <span></span>
+        <svg aria-hidden="true" width="14" height="9" viewBox="0 0 14 9"><path d="M1 1l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.3" style="color: var(--accent)"/></svg>
+      </button>
+      <ul class="dd-list" role="listbox" aria-labelledby="lbl-${f.key}" hidden>
+        ${f.list.map(o => `<li><button type="button" class="dd-opt" role="option" data-key="${f.key}" data-id="${o.id}">${o.name}</button></li>`).join('')}
+      </ul>
+    </div>
+    <div class="hint" id="hint-${f.key}"></div>
+  </div>`).join('');
+
+function setOpen(key) {
+  openDD = key;
+  FIELDS.forEach(f => {
+    const dd = $('dd-' + f.key), on = f.key === key;
+    dd.classList.toggle('open', on);
+    dd.querySelector('.dd-btn').setAttribute('aria-expanded', on);
+    dd.querySelector('.dd-list').hidden = !on;
+  });
+  if (key) {
+    const sel = $('dd-' + key).querySelector('[aria-selected="true"]');
+    if (sel) sel.scrollIntoView({ block: 'nearest' });
+  }
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.dd-btn');
+  const opt = e.target.closest('.dd-opt');
+  if (opt) {
+    state[opt.dataset.key] = opt.dataset.id;
+    setOpen(null);
+    $('dd-' + opt.dataset.key).querySelector('.dd-btn').focus();
+    render();
+  } else if (btn) {
+    const key = btn.parentElement.id.slice(3);
+    setOpen(openDD === key ? null : key);
+  } else if (!e.target.closest('.dd-list')) {
+    setOpen(null);
+  }
+});
+$('controls').addEventListener('keydown', e => {
+  if (!openDD) return;
+  if (e.key === 'Escape') {
+    const k = openDD; setOpen(null); $('dd-' + k).querySelector('.dd-btn').focus();
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    const opts = [...$('dd-' + openDD).querySelectorAll('.dd-opt')];
+    let i = opts.indexOf(document.activeElement);
+    if (i < 0) i = opts.findIndex(o => o.getAttribute('aria-selected') === 'true');
+    i = Math.max(0, Math.min(opts.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+    opts[i].focus();
+  }
+});
+
+function render() {
+  const strain = STRAINS.find(s => s.id === state.strain);
+  const type = TYPES[strain.type];
+  const m = METHODS.find(x => x.id === state.method);
+  const chosen = +state.level;
+  const tol = +state.tol;
+
+  // tolerance shifts how hard a given dose hits; high-CBD strains hit softer
+  const eff = Math.max(1, Math.min(5, chosen + tol - (strain.type === 'cbd' ? 1 : 0)));
+  const effI = Math.round(eff);
+  const lvl = LEVELS[effI - 1];
+  const boost = strain.thc >= 22 && ['smoke', 'vape', 'dab'].includes(m.kind) ? 1.05 : 1;
+  const mult = lvl.mult * boost;
+  const peakStart = m.peak[0];
+  const peakEnd = m.peak[1] * mult;
+  const total = [m.total[0] * mult, m.total[1] * mult];
+  const totMid = (total[0] + total[1]) / 2;
+  const doses = m.id === 'blunt' ? BLUNT_DOSES : DOSES[m.kind];
+
+  // dropdowns
+  FIELDS.forEach(f => {
+    const dd = $('dd-' + f.key);
+    dd.querySelector('.dd-btn span').textContent = f.list.find(o => o.id === state[f.key]).name;
+    dd.querySelectorAll('.dd-opt').forEach(o => o.setAttribute('aria-selected', o.dataset.id === state[f.key]));
+  });
+  $('hint-strain').textContent = type.label + (strain.thc ? ' / ~' + strain.thc + '% THC' : '');
+  $('hint-method').textContent = METHOD_HINT[m.kind];
+  $('hint-level').textContent = '→ ' + doses[chosen - 1];
+  $('hint-level').className = 'hint accent';
+  $('hint-tol').textContent = 'Tolerance changes how hard it hits';
+
+  $('rTotal').textContent = range(total[0], total[1]);
+  $('rOnset').textContent = range(m.onset[0], m.onset[1]);
+  $('rPeak').textContent = range(peakStart, peakEnd);
+  $('rStrength').textContent = lvl.short;
+
+  let feel = type.feel + ' ' + PEAK_FEEL[effI - 1];
+  if (m.kind === 'edible') feel += ' Edibles feel heavier and more in the body than smoking, because your liver turns THC into a stronger form.';
+  if (m.kind === 'dab') feel += ' Dabs hit fast and hard; the first few minutes can be a lot, even for regular smokers.';
+  if (tol !== 0 && effI !== chosen) feel += tol > 0
+    ? ' With low tolerance, expect it to hit harder than the dose suggests.'
+    : ' Your tolerance will soften this dose, so it will likely feel lighter.';
+  $('feel').textContent = feel;
+
+  const scale = .35 + .13 * eff;
+  const bodyPct = Math.round(Math.min(100, type.body * scale * 100 + (m.kind === 'edible' ? 12 : 0)));
+  const headPct = Math.round(Math.min(100, type.head * scale * 100));
+  $('bodyPct').textContent = bodyPct + '%'; $('bodyBar').style.width = bodyPct + '%';
+  $('headPct').textContent = headPct + '%'; $('headBar').style.width = headPct + '%';
+  $('tags').innerHTML = type.tags.map(t => `<span class="tag">${t}</span>`).join('');
+
+  const up = m.kind === 'edible'
+    ? 'Nothing at first, then a slow creep: warmth, heavy eyes, then a sudden "oh, there it is." Do not take more yet.'
+    : m.kind === 'tincture' ? 'A gradual lift over 15–45 minutes, gentler than an edible.'
+    : 'It lands within minutes: a rush to the head, dry mouth, red eyes, sometimes a faster heartbeat.';
+  const down = eff >= 4
+    ? 'It eases off in waves. Racing thoughts settle, but you will feel slow and spacey for a while.'
+    : 'The high softens into a relaxed, hazy state. Snacks and a nap are common.';
+  const after = m.kind === 'edible' || m.kind === 'tincture'
+    ? 'Grogginess can linger into the next morning. Sleep, water and breakfast help.'
+    : 'Mostly back to normal. Maybe tired, foggy or hungry for another hour.';
+  const phases = [
+    ['01', 'Coming up', range(m.onset[0], peakStart), up],
+    ['02', 'The peak', range(peakStart, peakEnd), PEAK_FEEL[effI - 1]],
+    ['03', 'Coming down', fmt(peakEnd) + ' → ' + fmt(total[1]), down],
+    ['04', 'Afterglow', 'after ' + fmt(totMid), after]
+  ];
+  $('steps').innerHTML = phases.map(([n, name, when, text]) =>
+    `<div class="step"><div class="num">${n}</div><div class="name">${name}</div><div class="when">${when}</div><p>${text}</p></div>`).join('');
+
+  const safety = [];
+  if (m.kind === 'edible') safety.push('Wait a full 2 hours before taking more. Most bad edible trips come from taking more too soon.');
+  if (m.kind === 'dab') safety.push('Concentrates are 60–90% THC. Start with the smallest dab you can.');
+  safety.push('Do not drive. Wait at least 6 hours after smoking or vaping, and 8+ after edibles.');
+  if (tol > 0) safety.push('First time? Go one level lower than you think, somewhere familiar, with a sober friend around.');
+  safety.push('Too high? It passes. Sit somewhere calm, drink water, eat something, breathe slow. CBD can take the edge off.');
+  safety.push('Alcohol on top makes everything stronger and brings on the spins.');
+  safety.push('Get medical help for chest pain, fainting, or vomiting that will not stop.');
+  $('safety').innerHTML = safety.map(s => `<li>${s}</li>`).join('');
+
+  drawChart({ m, eff, peakStart, peakEnd, total, totMid });
+}
+
+function drawChart({ m, eff, peakStart, peakEnd, total, totMid }) {
+  // x 120..985, y 340 (zero) .. 40 (max)
+  const L = 120, R = 985, Y0 = 340, YT = 40;
+  const span = total[1] * 1.08;
+  const onsetMid = (m.onset[0] + m.onset[1]) / 2;
+  const X = t => L + (t / span) * (R - L);
+  const Y = v => Y0 - (v / 5) * (Y0 - YT);
+  const f = (t, end) => {
+    const s0 = onsetMid * 0.4;
+    if (t < s0) return 0;
+    if (t < peakStart) return eff * smooth((t - s0) / (peakStart - s0));
+    if (t < peakEnd) return eff;
+    return eff * (1 - smooth((t - peakEnd) / (end - peakEnd)));
+  };
+  const lo = [], hi = [];
+  for (let i = 0; i <= 140; i++) {
+    const t = (i / 140) * span;
+    lo.push(X(t).toFixed(1) + ',' + Y(f(t, totMid)).toFixed(1));
+    hi.push(X(t).toFixed(1) + ',' + Y(f(t, total[1])).toFixed(1));
+  }
+  const useMin = span <= 120;
+  const step = useMin ? (span <= 60 ? 10 : 20) : (span <= 360 ? 60 : 120);
+  let ticks = '';
+  for (let t = 0; t <= span; t += step)
+    ticks += `<text x="${X(t).toFixed(1)}" y="368" text-anchor="middle">${useMin ? t + 'm' : t / 60 + 'h'}</text>`;
+  const grid = ['Micro', 'Mild', 'Solid', 'Strong', 'Max'].map((n, k) => {
+    const y = Y(k + 1);
+    return `<line x1="${L}" x2="${R}" y1="${y}" y2="${y}" stroke="#262626" stroke-width="1"/>` +
+      `<text x="108" y="${y + 5}" text-anchor="end" style="text-transform: uppercase; letter-spacing: 0.06em">${n}</text>`;
+  }).join('');
+  const px = X((peakStart + peakEnd) / 2), py = Y(eff);
+  const boxX = Math.min(Math.max(px - 42, L), R - 84);
+  const textX = Math.min(Math.max(px, L + 42), R - 42);
+  $('chart').innerHTML = `${grid}${ticks}
+    <path d="M${hi.join('L')}L${lo.slice().reverse().join('L')}Z" fill="var(--accent)" fill-opacity="0.16"/>
+    <path d="M${lo.join('L')}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    <line x1="${L}" x2="${R}" y1="340" y2="340" stroke="#444444" stroke-width="1"/>
+    <rect x="${boxX}" y="${py - 44}" width="84" height="30" fill="#0a0a0a" stroke="var(--accent)" stroke-width="1"/>
+    <text x="${textX}" y="${py - 23}" text-anchor="middle" style="fill: var(--accent); font-family: var(--display); font-weight: 300; font-size: 18px; letter-spacing: 0.12em">PEAK</text>`;
+}
+
+render();
+</script>
+</body>
+</html>
